@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import RegistrationButton from '@/components/hackathons/RegistrationButton';
 import { 
   Trophy, 
   Search, 
@@ -14,7 +16,8 @@ import {
   Wifi,
   Building,
   ChevronDown,
-  X
+  X,
+  ArrowRight
 } from 'lucide-react';
 
 interface Hackathon {
@@ -64,6 +67,7 @@ const prizeRanges = [
 ];
 
 export default function HackathonsPage() {
+  const { data: session } = useSession();
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,7 +126,7 @@ export default function HackathonsPage() {
     }
 
     return true;
-  });
+  }););
 
   const getTimeUntil = (date: string) => {
     const now = new Date();
@@ -292,89 +296,126 @@ export default function HackathonsPage() {
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredHackathons.map((hackathon) => (
-            <Link
+          {fidiv
               key={hackathon._id}
-              href={`/dashboard/hackathons/${hackathon._id}`}
               className="card-hover group"
             >
-              {/* Cover Image */}
-              <div className="aspect-video rounded-lg bg-gradient-to-br from-primary-900/50 to-secondary-900/50 mb-4 flex items-center justify-center overflow-hidden">
-                {hackathon.coverImage ? (
-                  <img
-                    src={hackathon.coverImage}
-                    alt={hackathon.title}
-                    className="w-full h-full object-cover"
+              {/* Cover Image - Clickable */}
+              <Link href={`/dashboard/hackathons/${hackathon._id}`} className="block">
+                <div className="aspect-video rounded-lg bg-gradient-to-br from-primary-900/50 to-secondary-900/50 mb-4 flex items-center justify-center overflow-hidden">
+                  {hackathon.coverImage ? (
+                    <img
+                      src={hackathon.coverImage}
+                      alt={hackathon.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Trophy className="w-12 h-12 text-dark-500 group-hover:scale-110 transition-transform" />
+                  )}
+                </div>
+              </Link>
+
+              {/* Content - Clickable */}
+              <Link href={`/dashboard/hackathons/${hackathon._id}`} className="block">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <h3 className="font-semibold text-lg group-hover:text-primary-400 transition-colors line-clamp-1">
+                    {hackathon.title}
+                  </h3>
+                  <span className={`badge capitalize shrink-0 ${
+                    hackathon.status === 'active' ? 'badge-success' : 'badge-primary'
+                  }`}>
+                    {hackathon.status}
+                  </span>
+                </div>
+
+                <p className="text-sm text-dark-400 mb-4 line-clamp-2">
+                  {hackathon.tagline || hackathon.description}
+                </p>
+
+                {/* Meta Info */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span className="badge bg-dark-700 text-dark-300">
+                    {hackathon.theme}
+                  </span>
+                  <span className="badge bg-dark-700 text-dark-300 flex items-center gap-1">
+                    {getModeIcon(hackathon.mode)}
+                    {hackathon.mode}
+                  </span>
+                </div>
+
+                {/* Stats Row */}
+                <div className="grid grid-cols-3 gap-2 py-4 border-t border-dark-700">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 text-accent-400 font-semibold">
+                      <DollarSign className="w-4 h-4" />
+                      {hackathon.totalPrizePool >= 1000
+                        ? `${(hackathon.totalPrizePool / 1000).toFixed(0)}K`
+                        : hackathon.totalPrizePool}
+                    </div>
+                    <div className="text-xs text-dark-400">Prize</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 text-blue-400 font-semibold">
+                      <Users className="w-4 h-4" />
+                      {hackathon.registeredTeams?.length || 0}
+                    </div>
+                    <div className="text-xs text-dark-400">Teams</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 text-yellow-400 font-semibold">
+                      <Clock className="w-4 h-4" />
+                      {hackathon.duration}h
+                    </div>
+                    <div className="text-xs text-dark-400">Duration</div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between pt-4 border-t border-dark-700 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-dark-400">
+                    <Calendar className="w-4 h-4" />
+                    {new Date(hackathon.startDate).toLocaleDateString()}
+                  </div>
+                  <div className="text-sm font-medium text-primary-400">
+                    Starts in {getTimeUntil(hackathon.startDate)}
+                  </div>
+                </div>
+              </Link>
+
+              {/* Registration Button - Interactive (not wrapped in Link) */}
+              {session?.user?.role === 'participant' && (
+                <div className="pt-4 border-t border-dark-700">
+                  <RegistrationButton 
+                    hackathonId={hackathon._id}
+                    hackathonTitle={hackathon.title}
                   />
-                ) : (
-                  <Trophy className="w-12 h-12 text-dark-500 group-hover:scale-110 transition-transform" />
-                )}
-              </div>
-
-              {/* Content */}
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <h3 className="font-semibold text-lg group-hover:text-primary-400 transition-colors line-clamp-1">
-                  {hackathon.title}
-                </h3>
-                <span className={`badge capitalize shrink-0 ${
-                  hackathon.status === 'active' ? 'badge-success' : 'badge-primary'
-                }`}>
-                  {hackathon.status}
-                </span>
-              </div>
-
-              <p className="text-sm text-dark-400 mb-4 line-clamp-2">
-                {hackathon.tagline || hackathon.description}
-              </p>
-
-              {/* Meta Info */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                <span className="badge bg-dark-700 text-dark-300">
-                  {hackathon.theme}
-                </span>
-                <span className="badge bg-dark-700 text-dark-300 flex items-center gap-1">
-                  {getModeIcon(hackathon.mode)}
-                  {hackathon.mode}
-                </span>
-              </div>
-
-              {/* Stats Row */}
-              <div className="grid grid-cols-3 gap-2 py-4 border-t border-dark-700">
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 text-accent-400 font-semibold">
-                    <DollarSign className="w-4 h-4" />
-                    {hackathon.totalPrizePool >= 1000
-                      ? `${(hackathon.totalPrizePool / 1000).toFixed(0)}K`
-                      : hackathon.totalPrizePool}
-                  </div>
-                  <div className="text-xs text-dark-400">Prize</div>
+                  <Link 
+                    href={`/dashboard/hackathons/${hackathon._id}`}
+                    className="mt-3 flex items-center justify-center gap-2 text-sm text-dark-400 hover:text-primary-400 transition-colors"
+                  >
+                    View Details <ArrowRight className="w-4 h-4" />
+                  </Link>
                 </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 text-blue-400 font-semibold">
-                    <Users className="w-4 h-4" />
-                    {hackathon.registeredTeams?.length || 0}
-                  </div>
-                  <div className="text-xs text-dark-400">Teams</div>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 text-yellow-400 font-semibold">
-                    <Clock className="w-4 h-4" />
-                    {hackathon.duration}h
-                  </div>
-                  <div className="text-xs text-dark-400">Duration</div>
-                </div>
-              </div>
+              )}
 
-              {/* Footer */}
-              <div className="flex items-center justify-between pt-4 border-t border-dark-700">
-                <div className="flex items-center gap-2 text-sm text-dark-400">
-                  <Calendar className="w-4 h-4" />
-                  {new Date(hackathon.startDate).toLocaleDateString()}
+              {/* Organization Actions */}
+              {session?.user?.role === 'organization' && (
+                <div className="pt-4 border-t border-dark-700 space-y-2">
+                  <Link 
+                    href={`/dashboard/hackathons/${hackathon._id}/monitor`}
+                    className="btn-primary w-full text-center flex items-center justify-center gap-2"
+                  >
+                    Live Monitoring
+                  </Link>
+                  <Link 
+                    href={`/dashboard/organization/registrations`}
+                    className="btn-secondary w-full text-center flex items-center justify-center gap-2"
+                  >
+                    View Registrations
+                  </Link>
                 </div>
-                <div className="text-sm font-medium text-primary-400">
-                  Starts in {getTimeUntil(hackathon.startDate)}
-                </div>
-              </div>
+              )}
+            </divv>
             </Link>
           ))}
         </div>
