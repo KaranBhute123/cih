@@ -452,9 +452,13 @@ export default function HackathonIDE() {
   useEffect(() => {
     return () => {
       stopActivityTracking();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (lockdownActive) {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        document.removeEventListener('contextmenu', (e) => e.preventDefault());
+        window.onbeforeunload = null;
+      }
     };
-  }, []);
+  }, [lockdownActive]);
 
   // Authentication Screen
   if (!isAuthenticated) {

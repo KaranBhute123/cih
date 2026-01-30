@@ -74,6 +74,29 @@ export async function POST(
       );
     }
 
+    // Validate file object
+    if (!file.id || !file.name || !file.language) {
+      return NextResponse.json(
+        { error: 'File must have id, name, and language' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size (max 5MB)
+    const fileSize = new Blob([file.content || '']).size;
+    if (fileSize > 5 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: 'File size exceeds 5MB limit' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize file name
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    if (sanitizedFileName !== file.name) {
+      file.name = sanitizedFileName;
+    }
+
     await connectDB();
 
     let teamFiles = await TeamFiles.findOne({

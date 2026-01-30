@@ -34,6 +34,18 @@ export async function POST(
       });
     }
 
+    // Additional security: prevent command injection
+    const dangerousPatterns = [';', '&&', '||', '|', '>', '<', '`', '$', '(', ')'];
+    const hasDangerousPattern = dangerousPatterns.some(pattern => 
+      command.includes(pattern) && !['echo', 'git'].includes(commandName)
+    );
+
+    if (hasDangerousPattern) {
+      return NextResponse.json({
+        output: 'Command contains potentially dangerous characters and cannot be executed.',
+      });
+    }
+
     try {
       const { stdout, stderr } = await execAsync(command, {
         timeout: 10000,

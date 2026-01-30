@@ -30,33 +30,37 @@ export async function POST(
 
     let output = '';
     let error = '';
+    const filesToCleanup: string[] = [];
 
     try {
       switch (language) {
         case 'javascript':
         case 'typescript': {
           const filePath = join(tempDir, fileName || 'code.js');
+          filesToCleanup.push(filePath);
           await writeFile(filePath, code);
           const { stdout, stderr } = await execAsync(`node "${filePath}"`, { timeout: 5000 });
           output = stdout;
           error = stderr;
-          await unlink(filePath);
           break;
         }
 
         case 'python': {
           const filePath = join(tempDir, fileName || 'code.py');
+          filesToCleanup.push(filePath);
           await writeFile(filePath, code);
           const { stdout, stderr } = await execAsync(`python "${filePath}"`, { timeout: 5000 });
           output = stdout;
           error = stderr;
-          await unlink(filePath);
           break;
         }
 
         case 'java': {
           const className = fileName?.replace('.java', '') || 'Main';
           const filePath = join(tempDir, `${className}.java`);
+          const classFile = join(tempDir, `${className}.class`);
+          filesToCleanup.push(filePath, classFile);
+          
           await writeFile(filePath, code);
           
           // Compile
@@ -69,19 +73,14 @@ export async function POST(
             output = stdout;
             error = stderr;
           }
-          
-          // Cleanup
-          await unlink(filePath);
-          const classFile = join(tempDir, `${className}.class`);
-          if (existsSync(classFile)) {
-            await unlink(classFile);
-          }
           break;
         }
 
         case 'cpp': {
           const filePath = join(tempDir, fileName || 'code.cpp');
           const outPath = join(tempDir, 'program');
+          filesToCleanup.push(filePath, outPath, `${outPath}.exe`);
+          
           await writeFile(filePath, code);
           
           // Compile
@@ -93,12 +92,6 @@ export async function POST(
             const { stdout, stderr } = await execAsync(`"${outPath}"`, { timeout: 5000 });
             output = stdout;
             error = stderr;
-          }
-          
-          // Cleanup
-          await unlink(filePath);
-          if (existsSync(outPath)) {
-            await unlink(outPath);
           }
           break;
         }
@@ -113,6 +106,17 @@ export async function POST(
       }
     } catch (execError: any) {
       error = execError.message || 'Execution error';
+    } finally {
+      // Cleanup all temporary files
+      for (const file of filesToCleanup) {
+        try {
+          if (existsSync(file)) {
+            await unlink(file);
+          }
+        } catch (cleanupError) {
+          // Ignore cleanup errors
+        }
+      }
     }
 
     return NextResponse.json({
