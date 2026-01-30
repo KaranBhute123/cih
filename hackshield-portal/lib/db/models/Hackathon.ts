@@ -220,6 +220,14 @@ const hackathonSchema = new Schema<IHackathon>(
       status: { type: String, enum: ['registered', 'checked-in', 'disqualified'], default: 'registered' },
       teamId: { type: Schema.Types.ObjectId, ref: 'Team' },
       
+      // Team Formation Mode
+      hasTeam: { type: Boolean, default: true },
+      needSmartMatching: { type: Boolean, default: false },
+      skills: [{ type: String }],
+      preferredTeamSize: { type: Number },
+      matchingStatus: { type: String, enum: ['pending', 'matched', 'not-needed'], default: 'not-needed' },
+      matchedWith: [{ type: String }], // User IDs of matched teammates
+      
       // Team Information
       teamName: { type: String },
       teamSize: { type: Number },
@@ -250,6 +258,12 @@ const hackathonSchema = new Schema<IHackathon>(
       projectIdea: { type: String },
       previousHackathonExperience: { type: String },
       specialRequirements: { type: String },
+      
+      // PPT Upload for Selection Round
+      pptUrl: { type: String },
+      pptUploadedAt: { type: Date },
+      selectionRound1Status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+      selectionRound1Feedback: { type: String },
     }],
     
     // Settings

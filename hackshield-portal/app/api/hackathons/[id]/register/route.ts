@@ -69,13 +69,15 @@ export async function POST(
     // Get registration data from request body
     const registrationData = await request.json();
 
-    // Validate team size
-    if (registrationData.teamSize < hackathon.minTeamSize || 
-        registrationData.teamSize > hackathon.maxTeamSize) {
-      return NextResponse.json(
-        { error: `Team size must be between ${hackathon.minTeamSize} and ${hackathon.maxTeamSize}` },
-        { status: 400 }
-      );
+    // Validate team size only if user has a team
+    if (registrationData.hasTeam) {
+      if (registrationData.teamSize < hackathon.minTeamSize || 
+          registrationData.teamSize > hackathon.maxTeamSize) {
+        return NextResponse.json(
+          { error: `Team size must be between ${hackathon.minTeamSize} and ${hackathon.maxTeamSize}` },
+          { status: 400 }
+        );
+      }
     }
 
     // Add participant with full registration details
@@ -88,7 +90,15 @@ export async function POST(
       status: 'registered' as const,
       teamId: undefined,
       
-      // Team Information
+      // Team Formation Mode
+      hasTeam: registrationData.hasTeam,
+      needSmartMatching: registrationData.needSmartMatching || false,
+      skills: registrationData.skills || [],
+      preferredTeamSize: registrationData.preferredTeamSize,
+      matchingStatus: registrationData.needSmartMatching ? 'pending' : 'not-needed',
+      matchedWith: [],
+      
+      // Team Information (only if has team)
       teamName: registrationData.teamName,
       teamSize: registrationData.teamSize,
       teamLeaderName: registrationData.teamLeaderName,
@@ -101,8 +111,8 @@ export async function POST(
       teamLeaderYearOfStudy: registrationData.teamLeaderYearOfStudy,
       teamLeaderCourse: registrationData.teamLeaderCourse,
       
-      // Team Members
-      teamMembers: registrationData.teamMembers.map((member: any) => ({
+      // Team Members (empty if no team)
+      teamMembers: registrationData.teamMembers?.map((member: any) => ({
         name: member.name,
         email: member.email,
         mobile: member.mobile,
@@ -112,12 +122,18 @@ export async function POST(
         universityName: member.universityName,
         yearOfStudy: member.yearOfStudy,
         course: member.course,
-      })),
+      })) || [],
       
       // Additional Information
       projectIdea: registrationData.projectIdea,
       previousHackathonExperience: registrationData.previousHackathonExperience,
       specialRequirements: registrationData.specialRequirements,
+      
+      // PPT Upload for Selection Round
+      pptUrl: registrationData.pptUrl,
+      pptUploadedAt: registrationData.pptUrl ? new Date() : undefined,
+      selectionRound1Status: 'pending',
+      selectionRound1Feedback: '',
     };
 
     hackathon.participants = hackathon.participants || [];
