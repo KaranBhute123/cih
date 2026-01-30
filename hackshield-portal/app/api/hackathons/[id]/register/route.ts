@@ -132,7 +132,7 @@ export async function POST(
       // PPT Upload for Selection Round
       pptUrl: registrationData.pptUrl,
       pptUploadedAt: registrationData.pptUrl ? new Date() : undefined,
-      selectionRound1Status: 'pending',
+      selectionRound1Status: 'pending' as const,
       selectionRound1Feedback: '',
     };
 
@@ -186,12 +186,19 @@ export async function GET(
       (p: any) => p.userId === session.user.id
     );
 
+    // Check if user has IDE credentials
+    const userParticipant = hackathon.participants?.find(
+      (p: any) => p.userId === session.user.id
+    );
+    const hasIdeCredentials = !!(userParticipant?.ideAccessId && userParticipant?.ideAccessPassword);
+
     return NextResponse.json({
       isRegistered,
       totalParticipants: hackathon.participants?.length || 0,
       maxParticipants: hackathon.maxParticipants,
       canRegister: hackathon.status === 'published' || hackathon.status === 'active',
       registrationDeadlinePassed: new Date() > new Date(hackathon.registrationEnd),
+      hasIdeCredentials,
     }, { status: 200 });
 
   } catch (error) {

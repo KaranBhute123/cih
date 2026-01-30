@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { 
   Code, FileCode, Play, Terminal as TerminalIcon, Globe, 
   Bot, Lock, AlertTriangle, Save, FolderPlus, Users,
@@ -13,6 +13,7 @@ export default function HackathonIDE() {
   const { data: session } = useSession();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const hackathonId = params.id as string;
 
   // Authentication State
@@ -21,6 +22,21 @@ export default function HackathonIDE() {
   const [accessPassword, setAccessPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Check for credentials in URL
+  useEffect(() => {
+    const urlAccessId = searchParams.get('accessId');
+    const urlPassword = searchParams.get('password');
+    
+    if (urlAccessId && urlPassword) {
+      setAccessId(urlAccessId);
+      setAccessPassword(urlPassword);
+      // Auto-authenticate with URL credentials
+      setTimeout(() => {
+        handleAuthenticate(urlAccessId, urlPassword);
+      }, 500);
+    }
+  }, [searchParams]);
 
   // Lockdown Mode State
   const [lockdownActive, setLockdownActive] = useState(false);
@@ -64,9 +80,35 @@ export default function HackathonIDE() {
   const activityInterval = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<Date>(new Date());
 
+  // Log Activity to Monitor
+  const logActivity = async (activityType: string, details: string, metadata?: any) => {
+    if (!isAuthenticated) return;
+    
+    try {
+      await fetch(`/api/hackathons/${hackathonId}/monitor/activities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: accessId,
+          teamName: session?.user?.name || 'Unknown Team',
+          participantName: session?.user?.name || 'Unknown User',
+          activityType,
+          details,
+          metadata: metadata || {},
+          severity: activityType === 'violation' ? 'critical' : 'info',
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to log activity:', error);
+    }
+  };
+
   // Authenticate with ID and Password
-  const handleAuthenticate = async () => {
-    if (!accessId || !accessPassword) {
+  const handleAuthenticate = async (id?: string, password?: string) => {
+    const authAccessId = id || accessId;
+    const authPassword = password || accessPassword;
+    
+    if (!authAccessId || !authPassword) {
       setAuthError('Please enter both Access ID and Password');
       return;
     }
@@ -78,7 +120,7 @@ export default function HackathonIDE() {
       const response = await fetch(`/api/hackathons/${hackathonId}/ide-auth`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessId, accessPassword }),
+        body: JSON.stringify({ accessId: authAccessId, accessPassword: authPassword }),
       });
 
       const data = await response.json();
@@ -134,6 +176,12 @@ export default function HackathonIDE() {
     const newAttempts = leaveAttempts + 1;
     setLeaveAttempts(newAttempts);
     setShowLeaveWarning(true);
+
+    // Log violation activity
+    logActivity('violation', `Leave attempt detected (Attempt ${newAttempts}/3)`, {
+      attemptNumber: newAttempts,
+      severity: newAttempts >= 3 ? 'critical' : 'warning'
+    });
 
     if (newAttempts >= 3) {
       disqualifyParticipant('Multiple attempts to leave the IDE');
@@ -262,6 +310,9 @@ export default function HackathonIDE() {
     setShowFileModal(false);
     setNewFileName('');
     saveFileToTeamStorage(file);
+    
+    // Log activity
+    logActivity('file_created', `Created file: ${newFileName}`, { fileName: newFileName, language: newFileLanguage });
   };
 
   // Save File to Team Storage
@@ -281,6 +332,9 @@ export default function HackathonIDE() {
       });
       setSyncStatus('synced');
       loadTeamFiles();
+      
+      // Log save activity
+      logActivity('save', `Saved file: ${file.name}`, { fileName: file.name, size: fileContent.length });
     } catch (error) {
       setSyncStatus('error');
       console.error('Save file error:', error);
@@ -310,6 +364,13 @@ export default function HackathonIDE() {
     }
 
     addTerminalOutput(`$ Running ${currentFile.name}...`);
+
+    // Log code execution activity
+    logActivity('execute', `Executed: ${currentFile.name}`, {
+      fileName: currentFile.name,
+      language: currentFile.language,
+      codeLength: fileContent.length
+    });
 
     try {
       const response = await fetch(`/api/hackathons/${hackathonId}/execute-code`, {
@@ -345,6 +406,9 @@ export default function HackathonIDE() {
     addTerminalOutput(`$ ${command}`);
     setTerminalHistory([...terminalHistory, command]);
     setHistoryIndex(-1);
+
+    // Log terminal activity
+    logActivity('terminal_command', `Executed: ${command}`, { command });
 
     try {
       const response = await fetch(`/api/hackathons/${hackathonId}/terminal`, {
@@ -440,6 +504,12 @@ export default function HackathonIDE() {
       const data = await response.json();
       if (response.ok) {
         setAiResponse(data.response);
+        // Log AI query activity
+        logActivity('ai_query', `AI Query: ${aiQuery.substring(0, 100)}${aiQuery.length > 100 ? '...' : ''}`, {
+          query: aiQuery,
+          currentFile: currentFile?.name,
+          responseLength: data.response?.length || 0
+        });
       }
     } catch (error) {
       setAiResponse('AI assistant error. Please try again.');
@@ -513,7 +583,7 @@ export default function HackathonIDE() {
             )}
 
             <button
-              onClick={handleAuthenticate}
+              onClick={async () => await handleAuthenticate()}
               disabled={loading}
               className="w-full py-3 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white rounded-lg font-medium disabled:opacity-50 transition-all"
             >

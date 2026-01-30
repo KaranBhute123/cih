@@ -57,6 +57,23 @@ export interface IParticipant {
   projectIdea?: string;
   previousHackathonExperience?: string;
   specialRequirements?: string;
+  
+  // PPT Upload for Selection Round
+  pptUrl?: string;
+  pptUploadedAt?: Date;
+  selectionRound1Status?: 'pending' | 'approved' | 'rejected';
+  selectionRound1Feedback?: string;
+  
+  // IDE Access Credentials
+  ideAccessId?: string;
+  ideAccessPassword?: string;
+  ideAccessGeneratedAt?: Date;
+  ideSessionActive?: boolean;
+  ideLastActivity?: Date;
+  ideSessionStarted?: Date;
+  ideAttemptedLeave?: number;
+  ideDisqualified?: boolean;
+  ideDisqualifiedReason?: string;
 }
 
 export interface IHackathon extends Document {

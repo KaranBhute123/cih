@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserPlus, UserMinus, Loader2, Users } from 'lucide-react';
+import { UserPlus, UserMinus, Loader2, Users, Code, ArrowRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import RegistrationForm from './RegistrationForm';
 
 interface RegistrationButtonProps {
@@ -17,6 +18,7 @@ export default function RegistrationButton({
   minTeamSize = 1,
   maxTeamSize = 4 
 }: RegistrationButtonProps) {
+  const router = useRouter();
   const [isRegistered, setIsRegistered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
@@ -24,6 +26,7 @@ export default function RegistrationButton({
   const [canRegister, setCanRegister] = useState(false);
   const [message, setMessage] = useState('');
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
+  const [hasCredentials, setHasCredentials] = useState(false);
 
   useEffect(() => {
     checkRegistrationStatus();
@@ -39,6 +42,7 @@ export default function RegistrationButton({
         setIsRegistered(data.isRegistered);
         setTotalParticipants(data.totalParticipants);
         setCanRegister(data.canRegister && !data.registrationDeadlinePassed);
+        setHasCredentials(data.hasIdeCredentials || false);
       }
     } catch (error) {
       console.error('Failed to check registration status:', error);
@@ -54,8 +58,12 @@ export default function RegistrationButton({
   const handleRegistrationSuccess = () => {
     setIsRegistered(true);
     checkRegistrationStatus();
-    setMessage('✅ Successfully registered!');
-    setTimeout(() => setMessage(''), 3000);
+    setMessage('Successfully registered! Access IDE after receiving credentials.');
+    setTimeout(() => setMessage(''), 5000);
+  };
+
+  const handleAccessIDE = () => {
+    router.push(`/dashboard/hackathons/${hackathonId}/ide-access`);
   };
 
   const handleUnregister = async () => {
@@ -161,9 +169,22 @@ export default function RegistrationButton({
         )}
 
         {isRegistered && !message && (
-          <div className="flex items-center gap-2 text-sm text-green-400 bg-green-900/20 px-4 py-2.5 rounded-lg border border-green-700">
-            <span className="text-lg">✓</span>
-            <span className="font-medium">You are registered for this hackathon</span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-green-400 bg-green-900/20 px-4 py-2.5 rounded-lg border border-green-700">
+              <span className="text-lg">✓</span>
+              <span className="font-medium">You are registered for this hackathon</span>
+            </div>
+            
+            {hasCredentials && (
+              <button
+                onClick={handleAccessIDE}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 text-white rounded-lg transition-all font-medium hover:shadow-lg hover:shadow-accent-500/30"
+              >
+                <Code className="w-5 h-5" />
+                <span className="font-semibold">Access IDE</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
       </div>
