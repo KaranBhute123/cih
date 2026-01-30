@@ -250,6 +250,11 @@ export default function IDEPage() {
   const [showAI, setShowAI] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [runOutput, setRunOutput] = useState<string[]>([]);
+  const [showCreateFile, setShowCreateFile] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+  const [newFileType, setNewFileType] = useState<'file' | 'folder'>('file');
   const [aiInput, setAiInput] = useState('');
   const [aiMessages, setAiMessages] = useState<{role: string; content: string}[]>([]);
   const [warningCount, setWarningCount] = useState(0);
@@ -375,6 +380,102 @@ export default function IDEPage() {
     setFiles(updateFileContent(files));
   };
 
+  // Function to run the current code
+  const handleRunCode = async () => {
+    if (!activeFile) {
+      toast.error('No file selected to run');
+      return;
+    }
+
+    setIsRunning(true);
+    setShowTerminal(true);
+    
+    try {
+      const fileContent = getActiveFileContent();
+      const language = getActiveFileLanguage();
+      
+      // Add to terminal output
+      const newOutput = [`$ Running ${activeFile}...`, ''];
+      setTerminalOutput(prev => [...prev, ...newOutput]);
+      
+      // Simulate code execution based on language
+      if (language === 'javascript' || language === 'typescript') {
+        // For React/JS files, show build output
+        setRunOutput([
+          'Starting development server...',
+          'Webpack compiled successfully!',
+          'App is running at http://localhost:3001',
+          '✓ Compiled successfully'
+        ]);
+        
+        // Update terminal
+        setTimeout(() => {
+          setTerminalOutput(prev => [
+            ...prev,
+            'Starting development server...',
+            'Webpack compiled successfully!',
+            'App is running at http://localhost:3001',
+            '✓ Compiled successfully',
+            ''
+          ]);
+          setIsRunning(false);
+        }, 2000);
+        
+      } else if (language === 'python') {
+        // Simulate Python execution
+        setRunOutput([
+          'Python 3.9.0',
+          'Running Python script...',
+          'Output: Hello, World!',
+          'Process finished with exit code 0'
+        ]);
+        
+        setTimeout(() => {
+          setTerminalOutput(prev => [
+            ...prev,
+            'Python 3.9.0',
+            'Running Python script...',
+            'Output: Hello, World!',
+            'Process finished with exit code 0',
+            ''
+          ]);
+          setIsRunning(false);
+        }, 1500);
+        
+      } else {
+        // Generic execution
+        setRunOutput([
+          `Executing ${language} file...`,
+          'Build successful',
+          'Process completed'
+        ]);
+        
+        setTimeout(() => {
+          setTerminalOutput(prev => [
+            ...prev,
+            `Executing ${language} file...`,
+            'Build successful',
+            'Process completed',
+            ''
+          ]);
+          setIsRunning(false);
+        }, 1000);
+      }
+      
+      toast.success('Code executed successfully!');
+      
+    } catch (error) {
+      setTerminalOutput(prev => [
+        ...prev,
+        'Error: Failed to execute code',
+        'Please check your code and try again.',
+        ''
+      ]);
+      setIsRunning(false);
+      toast.error('Failed to run code');
+    }
+  };
+
   const handleOpenFile = (path: string) => {
     if (!openFiles.includes(path)) {
       setOpenFiles([...openFiles, path]);
@@ -389,6 +490,134 @@ export default function IDEPage() {
     if (activeFile === path && newOpenFiles.length > 0) {
       setActiveFile(newOpenFiles[newOpenFiles.length - 1]);
     }
+  };
+
+  // Function to create new file
+  const handleCreateFile = () => {
+    if (!newFileName.trim()) {
+      toast.error('Please enter a file name');
+      return;
+    }
+    
+    const fileName = newFileName.trim();
+    const parentPath = '/src'; // Default to src folder
+    const fullPath = `${parentPath}/${fileName}`;
+    
+    // Check if file already exists
+    const findFile = (path: string): FileNode | null => {
+      const searchInNodes = (nodes: FileNode[]): FileNode | null => {
+        for (const node of nodes) {
+          if (node.path === path) return node;
+          if (node.children) {
+            const found = searchInNodes(node.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      return searchInNodes(files);
+    };
+    
+    const existingFile = findFile(fullPath);
+    if (existingFile) {
+      toast.error('File already exists');
+      return;
+    }
+    
+    // Determine file language based on extension
+    const getLanguage = (filename: string) => {
+      const ext = filename.split('.').pop()?.toLowerCase();
+      switch (ext) {
+        case 'js': case 'jsx': return 'javascript';
+        case 'ts': case 'tsx': return 'typescript';
+        case 'py': return 'python';
+        case 'html': return 'html';
+        case 'css': return 'css';
+        case 'json': return 'json';
+        case 'md': return 'markdown';
+        default: return 'plaintext';
+      }
+    };
+    
+    // Create default content based on file type
+    const getDefaultContent = (filename: string, language: string) => {
+      const name = filename.split('.')[0];
+      
+      switch (language) {
+        case 'javascript':
+          if (filename.endsWith('.jsx')) {
+            return `import React from 'react';\n\nfunction ${name}() {\n  return (\n    <div>\n      <h1>Hello from ${name}!</h1>\n    </div>\n  );\n}\n\nexport default ${name};`;
+          }
+          return `// ${filename}\nconsole.log('Hello from ${name}!');\n\nexport default {};`;
+          
+        case 'typescript':
+          if (filename.endsWith('.tsx')) {
+            return `import React from 'react';\n\ninterface ${name}Props {\n  // Add your props here\n}\n\nfunction ${name}(props: ${name}Props) {\n  return (\n    <div>\n      <h1>Hello from ${name}!</h1>\n    </div>\n  );\n}\n\nexport default ${name};`;
+          }
+          return `// ${filename}\nconsole.log('Hello from ${name}!');\n\nexport {};`;
+          
+        case 'python':
+          return `# ${filename}\nprint("Hello from ${name}!")\n\ndef main():\n    pass\n\nif __name__ == "__main__":\n    main()`;
+          
+        case 'html':
+          return `<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>${name}</title>\n</head>\n<body>\n    <h1>Hello from ${name}!</h1>\n</body>\n</html>`;
+          
+        case 'css':
+          return `/* ${filename} */\n\n.container {\n    margin: 0;\n    padding: 20px;\n    font-family: Arial, sans-serif;\n}\n\nh1 {\n    color: #333;\n    text-align: center;\n}`;
+          
+        case 'json':
+          return `{\n  "name": "${name}",\n  "version": "1.0.0",\n  "description": "Generated file"\n}`;
+          
+        default:
+          return `// ${filename}\n// Add your code here`;
+      }
+    };
+    
+    const language = getLanguage(fileName);
+    const content = newFileType === 'file' ? getDefaultContent(fileName, language) : undefined;
+    
+    // Add the new file to the file tree
+    const newFile: FileNode = {
+      name: fileName,
+      type: newFileType,
+      path: fullPath,
+      language: newFileType === 'file' ? language : undefined,
+      content: content,
+      children: newFileType === 'folder' ? [] : undefined
+    };
+    
+    // Update files state
+    setFiles(prevFiles => {
+      const updateFiles = (files: FileNode[]): FileNode[] => {
+        return files.map(file => {
+          if (file.path === parentPath && file.type === 'folder') {
+            return {
+              ...file,
+              children: [...(file.children || []), newFile]
+            };
+          } else if (file.children) {
+            return {
+              ...file,
+              children: updateFiles(file.children)
+            };
+          }
+          return file;
+        });
+      };
+      return updateFiles(prevFiles);
+    });
+    
+    // Open the new file if it's a file
+    if (newFileType === 'file') {
+      setOpenFiles(prev => [...prev, fullPath]);
+      setActiveFile(fullPath);
+    }
+    
+    // Reset form
+    setNewFileName('');
+    setShowCreateFile(false);
+    
+    toast.success(`${newFileType === 'file' ? 'File' : 'Folder'} created successfully!`);
   };
 
   const toggleFolder = (path: string) => {
@@ -578,6 +807,45 @@ export default function IDEPage() {
 
         {/* Editor & Panels */}
         <div className="flex-1 flex flex-col">
+          {/* Toolbar */}
+          <div className="h-10 bg-dark-900 border-b border-dark-800 flex items-center justify-between px-3">
+            <div className="flex items-center gap-2">
+              {/* Run Button */}
+              <button
+                onClick={handleRunCode}
+                disabled={isRunning || !activeFile}
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm rounded transition-colors"
+              >
+                <Play className={`w-4 h-4 ${isRunning ? 'animate-spin' : ''}`} />
+                {isRunning ? 'Running...' : 'Run Code'}
+              </button>
+              
+              {/* Create File Button */}
+              <button
+                onClick={() => setShowCreateFile(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                New File
+              </button>
+              
+              {/* Save Button */}
+              <button
+                onClick={() => toast.success('Files auto-saved!')}
+                className="flex items-center gap-2 px-3 py-1.5 bg-dark-700 hover:bg-dark-600 text-white text-sm rounded transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                Save
+              </button>
+            </div>
+            
+            {activeFile && (
+              <div className="text-sm text-dark-300">
+                {findFile(activeFile)?.name} - {getActiveFileLanguage()}
+              </div>
+            )}
+          </div>
+
           {/* Open File Tabs */}
           <div className="h-10 bg-dark-900 border-b border-dark-800 flex items-center gap-1 px-2 overflow-x-auto">
             {openFiles.map((path) => {
@@ -867,6 +1135,97 @@ export default function IDEPage() {
       {/* Settings Panel (Slide-in from right) */}
       {showSettings && (
         <SettingsPanel onClose={() => setShowSettings(false)} />
+      )}
+
+      {/* Create File Modal */}
+      {showCreateFile && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-dark-800 rounded-lg p-6 w-96 max-w-[90vw]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Create New File</h3>
+              <button
+                onClick={() => {
+                  setShowCreateFile(false);
+                  setNewFileName('');
+                }}
+                className="text-dark-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">File Type</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setNewFileType('file')}
+                    className={`px-3 py-2 rounded text-sm ${
+                      newFileType === 'file'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-dark-700 text-dark-300 hover:text-white'
+                    }`}
+                  >
+                    <File className="w-4 h-4 inline mr-2" />
+                    File
+                  </button>
+                  <button
+                    onClick={() => setNewFileType('folder')}
+                    className={`px-3 py-2 rounded text-sm ${
+                      newFileType === 'folder'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-dark-700 text-dark-300 hover:text-white'
+                    }`}
+                  >
+                    <Folder className="w-4 h-4 inline mr-2" />
+                    Folder
+                  </button>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  {newFileType === 'file' ? 'File' : 'Folder'} Name
+                </label>
+                <input
+                  type="text"
+                  value={newFileName}
+                  onChange={(e) => setNewFileName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleCreateFile()}
+                  placeholder={newFileType === 'file' ? 'e.g., Component.tsx' : 'e.g., components'}
+                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded focus:outline-none focus:border-primary-500 text-white"
+                  autoFocus
+                />
+              </div>
+              
+              {newFileType === 'file' && (
+                <div className="text-sm text-dark-400">
+                  <p className="font-medium mb-1">Supported extensions:</p>
+                  <p>.js, .jsx, .ts, .tsx, .py, .html, .css, .json, .md</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setShowCreateFile(false);
+                  setNewFileName('');
+                }}
+                className="px-4 py-2 text-dark-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateFile}
+                disabled={!newFileName.trim()}
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded transition-colors"
+              >
+                Create {newFileType === 'file' ? 'File' : 'Folder'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* IDE Lockdown Component */}

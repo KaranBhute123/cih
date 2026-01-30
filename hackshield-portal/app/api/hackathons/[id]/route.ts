@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/authOptions';
 import connectDB from '@/lib/db/connect';
 import Hackathon from '@/lib/db/models/Hackathon';
 import Team from '@/lib/db/models/Team';
+import User from '@/lib/db/models/User';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,12 +20,13 @@ export async function GET(
       .populate('judges', 'name email avatar')
       .populate({
         path: 'registeredTeams',
-        select: 'name members status',
+        select: 'name members status projectTitle',
         populate: {
           path: 'members.user',
           select: 'name avatar',
         },
-      });
+      })
+      .lean();
 
     if (!hackathon) {
       return NextResponse.json(
