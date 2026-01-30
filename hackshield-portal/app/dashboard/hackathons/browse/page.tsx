@@ -254,13 +254,15 @@ export default function LiveHackathonsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredHackathons.map((hackathon) => (
-              <Link
+              <div
                 key={hackathon._id}
-                href={`/dashboard/hackathons/${hackathon._id}`}
-                className="block group"
+                className="bg-dark-900 border border-dark-800 rounded-xl overflow-hidden hover:border-primary-500 transition-all hover:shadow-lg hover:shadow-primary-500/20"
               >
-                <div className="bg-dark-900 border border-dark-800 rounded-xl overflow-hidden hover:border-primary-500 transition-all hover:shadow-lg hover:shadow-primary-500/20">
-                  {/* Cover Image */}
+                {/* Cover Image - Clickable to view details */}
+                <Link 
+                  href={`/dashboard/hackathons/${hackathon._id}`}
+                  className="block group"
+                >
                   <div className="h-48 bg-gradient-to-br from-primary-900/30 to-secondary-900/30 relative overflow-hidden">
                     {hackathon.coverImage ? (
                       <img
@@ -279,8 +281,13 @@ export default function LiveHackathonsPage() {
                       {hackathon.status.toUpperCase()}
                     </div>
                   </div>
+                </Link>
 
-                  <div className="p-5">
+                <div className="p-5">
+                  <Link 
+                    href={`/dashboard/hackathons/${hackathon._id}`}
+                    className="block group"
+                  >
                     {/* Organization */}
                     <div className="flex items-center gap-2 mb-3">
                       {hackathon.organizationLogo && (
@@ -331,7 +338,7 @@ export default function LiveHackathonsPage() {
                     </div>
 
                     {/* Prize and Registration */}
-                    <div className="flex items-center justify-between pt-4 border-t border-dark-800">
+                    <div className="flex items-center justify-between pt-4 border-t border-dark-800 mb-4">
                       <div className="flex items-center gap-2">
                         <Trophy className="w-5 h-5 text-yellow-400" />
                         <div>
@@ -356,17 +363,25 @@ export default function LiveHackathonsPage() {
                         )}
                       </div>
                     </div>
+                  </Link>
 
-                    {/* Registration Section */}
-                    <div className="mt-4">
-                      <RegistrationButton 
-                        hackathonId={hackathon._id}
-                        hackathonTitle={hackathon.title}
-                      />
-                    </div>
+                  {/* Registration Button - Outside Link so it's clickable */}
+                  <div className="pt-4 border-t border-dark-800">
+                    <RegistrationButton 
+                      hackathonId={hackathon._id}
+                      hackathonTitle={hackathon.title}
+                    />
+                    
+                    {/* View Details Link */}
+                    <Link 
+                      href={`/dashboard/hackathons/${hackathon._id}`}
+                      className="block mt-3 text-center text-sm text-dark-400 hover:text-primary-400 transition-colors"
+                    >
+                      View Full Details →
+                    </Link>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}
