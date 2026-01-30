@@ -38,6 +38,8 @@ interface Hackathon {
   totalPrizePool: number;
   registeredTeams: string[];
   maxTeams?: number;
+  minTeamSize: number;
+  maxTeamSize: number;
   allowedTechnologies: string[];
   status: string;
 }
@@ -126,7 +128,7 @@ export default function HackathonsPage() {
     }
 
     return true;
-  }););
+  });
 
   const getTimeUntil = (date: string) => {
     const now = new Date();
@@ -296,7 +298,8 @@ export default function HackathonsPage() {
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {fidiv
+          {filteredHackathons.map((hackathon) => (
+            <div
               key={hackathon._id}
               className="card-hover group"
             >
@@ -388,6 +391,8 @@ export default function HackathonsPage() {
                   <RegistrationButton 
                     hackathonId={hackathon._id}
                     hackathonTitle={hackathon.title}
+                    minTeamSize={hackathon.minTeamSize}
+                    maxTeamSize={hackathon.maxTeamSize}
                   />
                   <Link 
                     href={`/dashboard/hackathons/${hackathon._id}`}
@@ -415,8 +420,7 @@ export default function HackathonsPage() {
                   </Link>
                 </div>
               )}
-            </divv>
-            </Link>
+            </div>
           ))}
         </div>
       )}

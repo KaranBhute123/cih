@@ -16,6 +16,18 @@ export interface IJudgingCriteria {
   description?: string;
 }
 
+export interface ITeamMember {
+  name: string;
+  email: string;
+  mobile: string;
+  gender: 'male' | 'female' | 'other' | 'prefer-not-to-say';
+  dateOfBirth: Date;
+  collegeName: string;
+  universityName?: string;
+  yearOfStudy: string;
+  course?: string;
+}
+
 export interface IParticipant {
   userId: string;
   name: string;
@@ -24,6 +36,27 @@ export interface IParticipant {
   registeredAt: Date;
   status: 'registered' | 'checked-in' | 'disqualified';
   teamId?: mongoose.Types.ObjectId;
+  
+  // Team Information
+  teamName: string;
+  teamSize: number;
+  teamLeaderName: string;
+  teamLeaderEmail: string;
+  teamLeaderMobile: string;
+  teamLeaderGender: 'male' | 'female' | 'other' | 'prefer-not-to-say';
+  teamLeaderDOB: Date;
+  teamLeaderCollege: string;
+  teamLeaderUniversity?: string;
+  teamLeaderYearOfStudy: string;
+  teamLeaderCourse?: string;
+  
+  // Team Members
+  teamMembers: ITeamMember[];
+  
+  // Additional Information
+  projectIdea?: string;
+  previousHackathonExperience?: string;
+  specialRequirements?: string;
 }
 
 export interface IHackathon extends Document {

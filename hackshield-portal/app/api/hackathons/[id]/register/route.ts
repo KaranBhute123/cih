@@ -66,15 +66,58 @@ export async function POST(
       );
     }
 
-    // Add participant
+    // Get registration data from request body
+    const registrationData = await request.json();
+
+    // Validate team size
+    if (registrationData.teamSize < hackathon.minTeamSize || 
+        registrationData.teamSize > hackathon.maxTeamSize) {
+      return NextResponse.json(
+        { error: `Team size must be between ${hackathon.minTeamSize} and ${hackathon.maxTeamSize}` },
+        { status: 400 }
+      );
+    }
+
+    // Add participant with full registration details
     const participant = {
       userId: session.user.id,
-      name: session.user.name || 'Unknown',
-      email: session.user.email || '',
+      name: session.user.name || registrationData.teamLeaderName,
+      email: session.user.email || registrationData.teamLeaderEmail,
       avatar: session.user.avatar,
       registeredAt: new Date(),
-      status: 'registered' as const, // registered, checked-in, disqualified
+      status: 'registered' as const,
       teamId: undefined,
+      
+      // Team Information
+      teamName: registrationData.teamName,
+      teamSize: registrationData.teamSize,
+      teamLeaderName: registrationData.teamLeaderName,
+      teamLeaderEmail: registrationData.teamLeaderEmail,
+      teamLeaderMobile: registrationData.teamLeaderMobile,
+      teamLeaderGender: registrationData.teamLeaderGender,
+      teamLeaderDOB: new Date(registrationData.teamLeaderDOB),
+      teamLeaderCollege: registrationData.teamLeaderCollege,
+      teamLeaderUniversity: registrationData.teamLeaderUniversity,
+      teamLeaderYearOfStudy: registrationData.teamLeaderYearOfStudy,
+      teamLeaderCourse: registrationData.teamLeaderCourse,
+      
+      // Team Members
+      teamMembers: registrationData.teamMembers.map((member: any) => ({
+        name: member.name,
+        email: member.email,
+        mobile: member.mobile,
+        gender: member.gender,
+        dateOfBirth: new Date(member.dateOfBirth),
+        collegeName: member.collegeName,
+        universityName: member.universityName,
+        yearOfStudy: member.yearOfStudy,
+        course: member.course,
+      })),
+      
+      // Additional Information
+      projectIdea: registrationData.projectIdea,
+      previousHackathonExperience: registrationData.previousHackathonExperience,
+      specialRequirements: registrationData.specialRequirements,
     };
 
     hackathon.participants = hackathon.participants || [];
