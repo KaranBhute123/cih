@@ -264,6 +264,17 @@ const hackathonSchema = new Schema<IHackathon>(
       pptUploadedAt: { type: Date },
       selectionRound1Status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
       selectionRound1Feedback: { type: String },
+      
+      // IDE Access Credentials
+      ideAccessId: { type: String },
+      ideAccessPassword: { type: String },
+      ideAccessGeneratedAt: { type: Date },
+      ideSessionActive: { type: Boolean, default: false },
+      ideLastActivity: { type: Date },
+      ideSessionStarted: { type: Date },
+      ideAttemptedLeave: { type: Number, default: 0 },
+      ideDisqualified: { type: Boolean, default: false },
+      ideDisqualifiedReason: { type: String },
     }],
     
     // Settings
