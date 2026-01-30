@@ -14,6 +14,7 @@ import {
   Check,
   Mail,
   Code,
+  Code2,
   MessageSquare,
   Calendar,
   Trophy,
@@ -273,13 +274,13 @@ export default function TeamDetailPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {team.hackathon.status === 'active' && isMember && (
+          {(team.hackathon.status === 'active' || team.hackathon.status === 'published') && isMember && (
             <Link
               href={`/dashboard/ide?team=${team._id}`}
               className="btn-primary flex items-center gap-2"
             >
-              <Play className="w-4 h-4" />
-              Open IDE
+              <Code2 className="w-5 h-5" />
+              {team.hackathon.status === 'active' ? 'Start Coding' : 'Practice Mode'}
             </Link>
           )}
           

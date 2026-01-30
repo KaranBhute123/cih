@@ -22,7 +22,8 @@ import {
   Shield,
   Code,
   Briefcase,
-  Award
+  Award,
+  Activity
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -531,9 +532,19 @@ export default function HackathonDetailPage() {
             )}
             
             {session?.user?.role === 'organization' && (
-              <Link href={`/dashboard/hackathons/${hackathonId}/manage`} className="btn-primary w-full text-center">
-                Manage Hackathon
-              </Link>
+              <div className="space-y-3">
+                <Link href={`/dashboard/hackathons/${hackathonId}/manage`} className="btn-primary w-full text-center block">
+                  Manage Hackathon
+                </Link>
+                <Link href={`/dashboard/hackathons/${hackathonId}/monitor`} className="btn-secondary w-full text-center block flex items-center justify-center gap-2">
+                  <Activity className="w-4 h-4" />
+                  Live Monitoring
+                </Link>
+                <Link href={`/dashboard/organization/registrations`} className="btn-secondary w-full text-center block flex items-center justify-center gap-2">
+                  <Users className="w-4 h-4" />
+                  View Registrations
+                </Link>
+              </div>
             )}
 
             {!session && (
