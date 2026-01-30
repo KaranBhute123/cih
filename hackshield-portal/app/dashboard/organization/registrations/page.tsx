@@ -11,6 +11,37 @@ interface Participant {
   registeredAt: string;
   status: string;
   teamId?: string;
+  
+  // Team Information
+  teamName?: string;
+  teamSize?: number;
+  teamLeaderName?: string;
+  teamLeaderEmail?: string;
+  teamLeaderMobile?: string;
+  teamLeaderGender?: string;
+  teamLeaderDOB?: string;
+  teamLeaderCollege?: string;
+  teamLeaderUniversity?: string;
+  teamLeaderYearOfStudy?: string;
+  teamLeaderCourse?: string;
+  
+  // Team Members
+  teamMembers?: Array<{
+    name: string;
+    email: string;
+    mobile: string;
+    gender: string;
+    dateOfBirth: string;
+    collegeName: string;
+    universityName?: string;
+    yearOfStudy: string;
+    course?: string;
+  }>;
+  
+  // Additional Information
+  projectIdea?: string;
+  previousHackathonExperience?: string;
+  specialRequirements?: string;
 }
 
 interface Hackathon {
@@ -97,13 +128,17 @@ export default function RegistrationsPage() {
     if (!hackathon || !hackathon.participants) return;
 
     const csv = [
-      ['Name', 'Email', 'Registered At', 'Status', 'Team ID'].join(','),
+      ['Name', 'Email', 'Team Name', 'Team Size', 'Leader Mobile', 'Leader College', 'Year of Study', 'Registered At', 'Status'].join(','),
       ...hackathon.participants.map(p => [
         p.name,
         p.email,
+        p.teamName || 'N/A',
+        p.teamSize || '1',
+        p.teamLeaderMobile || 'N/A',
+        p.teamLeaderCollege || 'N/A',
+        p.teamLeaderYearOfStudy || 'N/A',
         new Date(p.registeredAt).toLocaleString(),
         p.status,
-        p.teamId || 'N/A'
       ].join(','))
     ].join('\n');
 

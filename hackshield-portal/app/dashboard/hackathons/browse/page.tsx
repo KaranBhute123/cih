@@ -370,6 +370,8 @@ export default function LiveHackathonsPage() {
                     <RegistrationButton 
                       hackathonId={hackathon._id}
                       hackathonTitle={hackathon.title}
+                      minTeamSize={hackathon.minTeamSize}
+                      maxTeamSize={hackathon.maxTeamSize}
                     />
                     
                     {/* View Details Link */}

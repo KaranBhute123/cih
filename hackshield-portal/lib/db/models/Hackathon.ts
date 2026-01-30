@@ -219,6 +219,37 @@ const hackathonSchema = new Schema<IHackathon>(
       registeredAt: { type: Date, default: Date.now },
       status: { type: String, enum: ['registered', 'checked-in', 'disqualified'], default: 'registered' },
       teamId: { type: Schema.Types.ObjectId, ref: 'Team' },
+      
+      // Team Information
+      teamName: { type: String },
+      teamSize: { type: Number },
+      teamLeaderName: { type: String },
+      teamLeaderEmail: { type: String },
+      teamLeaderMobile: { type: String },
+      teamLeaderGender: { type: String, enum: ['male', 'female', 'other', 'prefer-not-to-say'] },
+      teamLeaderDOB: { type: Date },
+      teamLeaderCollege: { type: String },
+      teamLeaderUniversity: { type: String },
+      teamLeaderYearOfStudy: { type: String },
+      teamLeaderCourse: { type: String },
+      
+      // Team Members
+      teamMembers: [{
+        name: { type: String },
+        email: { type: String },
+        mobile: { type: String },
+        gender: { type: String, enum: ['male', 'female', 'other', 'prefer-not-to-say'] },
+        dateOfBirth: { type: Date },
+        collegeName: { type: String },
+        universityName: { type: String },
+        yearOfStudy: { type: String },
+        course: { type: String },
+      }],
+      
+      // Additional Information
+      projectIdea: { type: String },
+      previousHackathonExperience: { type: String },
+      specialRequirements: { type: String },
     }],
     
     // Settings
