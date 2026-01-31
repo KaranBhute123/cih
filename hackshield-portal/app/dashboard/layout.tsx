@@ -34,12 +34,35 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/login');
     }
   }, [status, router]);
+
+  useEffect(() => {
+    // Fetch unread notification count
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await fetch('/api/notifications?unreadOnly=true');
+        const data = await res.json();
+        if (res.ok && data.notifications) {
+          setUnreadCount(data.notifications.length);
+        }
+      } catch (error) {
+        console.error('Error fetching unread count:', error);
+      }
+    };
+
+    if (session) {
+      fetchUnreadCount();
+      // Poll every 30 seconds for new notifications
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [session]);
 
   if (status === 'loading') {
     return (
@@ -66,8 +89,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       return [
         ...commonItems,
         { href: '/dashboard/teams', icon: Users, label: 'My Teams' },
-        { href: '/dashboard/projects', icon: FolderGit2, label: 'My Projects' },
         { href: '/dashboard/ide', icon: Code2, label: 'IDE' },
+        { href: '/dashboard/projects', icon: FolderGit2, label: 'My Projects' },
         { href: '/dashboard/notifications', icon: Bell, label: 'Notifications' },
       ];
     }
@@ -76,9 +99,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       return [
         ...commonItems,
         { href: '/dashboard/manage', icon: Building, label: 'Manage Events' },
+        { href: '/dashboard/organization/notifications', icon: Bell, label: 'Notifications' },
         { href: '/dashboard/judging', icon: Gavel, label: 'Judging' },
         { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
-        { href: '/dashboard/notifications', icon: Bell, label: 'Notifications' },
       ];
     }
 
@@ -185,10 +208,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           <div className="flex items-center gap-4 ml-auto">
             {/* Notifications */}
-            <button className="relative p-2 text-dark-400 hover:text-white transition-colors">
+            <Link 
+              href="/dashboard/notifications"
+              className="relative p-2 text-dark-400 hover:text-white transition-colors"
+            >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+              {unreadCount > 0 && (
+                <span className="absolute top-0 right-0 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Link>
 
             {/* User menu */}
             <div className="relative">

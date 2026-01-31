@@ -18,11 +18,20 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
-    const notifications = await Notification.find({
-      user: session.user.id,
-    })
+    const { searchParams } = new URL(req.url);
+    const unreadOnly = searchParams.get('unreadOnly') === 'true';
+
+    const query: any = {
+      recipient: session.user.id,
+    };
+
+    if (unreadOnly) {
+      query.read = false;
+    }
+
+    const notifications = await Notification.find(query)
       .sort({ createdAt: -1 })
-      .limit(50);
+      .limit(unreadOnly ? 100 : 50);
 
     return NextResponse.json({ success: true, notifications });
   } catch (error) {

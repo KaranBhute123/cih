@@ -16,11 +16,16 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
+    // Query for teams using both old and new field structures
     const teams = await Team.find({
-      'members.user': session.user.id,
+      $or: [
+        { 'members.user': session.user.id },
+        { 'members.userId': session.user.id },
+        { leaderId: session.user.id }
+      ]
     })
-      .populate('hackathon', 'title status startDate endDate')
-      .populate('members.user', 'name email avatar')
+      .populate('hackathon hackathonId', 'title status startDate endDate')
+      .populate('members.user members.userId leaderId', 'name email avatar')
       .sort({ createdAt: -1 });
 
     return NextResponse.json({ teams });

@@ -23,12 +23,13 @@ export async function GET(req: NextRequest) {
 
     const query: any = {};
     if (hackathonId) {
-      query.hackathon = hackathonId;
+      query.hackathonId = hackathonId;
     }
 
     const teams = await Team.find(query)
-      .populate('hackathon', 'title status startDate')
-      .populate('members.user', 'name email avatar')
+      .populate('hackathonId', 'title status startDate')
+      .populate('leaderId', 'name email avatar')
+      .populate('members.userId', 'name email avatar')
       .sort({ createdAt: -1 });
 
     return NextResponse.json({ teams });
@@ -79,8 +80,11 @@ export async function POST(req: NextRequest) {
 
     // Check if user is already in a team for this hackathon
     const existingTeam = await Team.findOne({
-      hackathon: hackathonId,
-      'members.user': session.user.id,
+      hackathonId: hackathonId,
+      $or: [
+        { leaderId: session.user.id },
+        { 'members.userId': session.user.id }
+      ]
     });
 
     if (existingTeam) {
@@ -93,9 +97,10 @@ export async function POST(req: NextRequest) {
     // Create the team
     const team = await Team.create({
       name,
-      hackathon: hackathonId,
+      hackathonId: hackathonId,
+      leaderId: session.user.id,
       members: [{
-        user: session.user.id,
+        userId: session.user.id,
         role: 'leader',
         joinedAt: new Date(),
       }],

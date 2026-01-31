@@ -23,7 +23,8 @@ export async function GET(
     }
 
     // Check if user is the organization owner
-    if (hackathon.organization.toString() !== session.user.id) {
+    const ownerId = hackathon.organization || (hackathon as any).createdBy;
+    if (ownerId && ownerId.toString() !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

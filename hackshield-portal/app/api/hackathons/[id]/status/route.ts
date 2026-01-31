@@ -33,7 +33,8 @@ export async function PATCH(
     }
 
     // Verify ownership (only organization that created it can update status)
-    if (hackathon.organization.toString() !== session.user.id) {
+    const ownerId = hackathon.organization || (hackathon as any).createdBy;
+    if (ownerId && ownerId.toString() !== session.user.id) {
       return NextResponse.json(
         { error: 'You do not have permission to update this hackathon' },
         { status: 403 }

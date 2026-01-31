@@ -6,7 +6,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { 
   Code, FileCode, Play, Terminal as TerminalIcon, Globe, 
   Bot, Lock, AlertTriangle, Save, FolderPlus, Users,
-  Eye, EyeOff, Settings, RefreshCw
+  Eye, EyeOff, Settings, RefreshCw, Clock
 } from 'lucide-react';
 
 export default function HackathonIDE() {
@@ -22,21 +22,89 @@ export default function HackathonIDE() {
   const [accessPassword, setAccessPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Organization Schedule State
+  const [ideScheduleStatus, setIdeScheduleStatus] = useState({
+    isActive: false,
+    isApproved: false,
+    nextWindow: null as Date | null,
+    currentWindow: null as { start: Date; end: Date; } | null,
+    message: 'IDE access is currently disabled'
+  });
+  const [timeUntilNextWindow, setTimeUntilNextWindow] = useState('');
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Check for credentials in URL
+  // Check organization schedule every minute
   useEffect(() => {
-    const urlAccessId = searchParams.get('accessId');
-    const urlPassword = searchParams.get('password');
-    
-    if (urlAccessId && urlPassword) {
-      setAccessId(urlAccessId);
-      setAccessPassword(urlPassword);
-      // Auto-authenticate with URL credentials
-      setTimeout(() => {
-        handleAuthenticate(urlAccessId, urlPassword);
-      }, 500);
+    // Skip schedule check for demo - authenticate immediately
+    if (session?.user) {
+      handleDemoAuthenticate();
     }
-  }, [searchParams]);
+  }, [hackathonId, session]);
+
+  // Demo authentication - no credentials needed
+  const handleDemoAuthenticate = async () => {
+    setLoading(true);
+    setAuthError('');
+
+    try {
+      const response = await fetch(`/api/hackathons/${hackathonId}/ide-auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsAuthenticated(true);
+        setLockdownActive(data.securitySettings?.enableLockdownMode || false);
+        setHackathonEndTime(new Date(data.endTime));
+        loadTeamFiles();
+        startActivityTracking();
+        if (data.securitySettings?.enableLockdownMode) {
+          enableLockdownMode();
+        }
+        setIdeScheduleStatus({
+          isActive: true,
+          isApproved: true,
+          nextWindow: null,
+          currentWindow: null,
+          message: 'IDE access granted - Demo Mode'
+        });
+      } else {
+        setAuthError(data.error || 'Access denied');
+      }
+    } catch (error) {
+      setAuthError('Authentication failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate time until next window
+  useEffect(() => {
+    if (ideScheduleStatus.nextWindow) {
+      const nextWindow = new Date(ideScheduleStatus.nextWindow);
+      const now = currentTime;
+      const timeDiff = nextWindow.getTime() - now.getTime();
+      
+      if (timeDiff > 0) {
+        const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+        setTimeUntilNextWindow(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      } else {
+        setTimeUntilNextWindow('00:00:00');
+      }
+    }
+  }, [currentTime, ideScheduleStatus.nextWindow]);
+
+  // Disable auto-authentication from URL - use demo mode instead
+  useEffect(() => {
+    // Demo mode - no URL parameters needed
+    // Authentication happens automatically via handleDemoAuthenticate
+  }, [searchParams, ideScheduleStatus]);
 
   // Lockdown Mode State
   const [lockdownActive, setLockdownActive] = useState(false);
@@ -530,79 +598,45 @@ export default function HackathonIDE() {
     };
   }, [lockdownActive]);
 
-  // Authentication Screen
+  // Loading/Authentication Screen
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-primary-950 flex items-center justify-center p-4">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-8 max-w-md w-full">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl p-8 max-w-md w-full text-center">
           <div className="flex items-center justify-center mb-6">
             <div className="p-4 bg-primary-600/20 rounded-full">
-              <Lock className="w-12 h-12 text-primary-400" />
+              {loading ? (
+                <RefreshCw className="w-12 h-12 text-primary-400 animate-spin" />
+              ) : (
+                <Lock className="w-12 h-12 text-primary-400" />
+              )}
             </div>
           </div>
 
           <h2 className="text-2xl font-bold text-white text-center mb-2">
-            Hackathon IDE Access
+            {loading ? 'Authenticating...' : 'IDE Access'}
           </h2>
           <p className="text-dark-300 text-center mb-6">
-            Enter your credentials to access the coding environment
+            {loading ? 'Verifying your access...' : authError || 'Initializing Demo Mode...'}
           </p>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-dark-200 mb-2">
-                Access ID
-              </label>
-              <input
-                type="text"
-                value={accessId}
-                onChange={(e) => setAccessId(e.target.value.toUpperCase())}
-                className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 uppercase"
-                placeholder="XXXXXXXX"
-                maxLength={8}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-dark-200 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                value={accessPassword}
-                onChange={(e) => setAccessPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500"
-                placeholder="Enter password"
-              />
-            </div>
-
-            {authError && (
-              <div className="p-3 bg-red-900/20 border border-red-700 rounded-lg text-red-400 text-sm">
-                {authError}
-              </div>
-            )}
-
-            <button
-              onClick={async () => await handleAuthenticate()}
-              disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white rounded-lg font-medium disabled:opacity-50 transition-all"
-            >
-              {loading ? 'Authenticating...' : 'Enter IDE'}
-            </button>
+          {/* Demo Mode Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/20 border border-green-500/30 rounded-lg">
+            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-green-400 text-sm font-medium">Demo Mode Active</span>
           </div>
 
-          <div className="mt-6 p-4 bg-yellow-900/20 border border-yellow-700/50 rounded-lg">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-yellow-200">
-                <p className="font-medium mb-1">Lockdown Mode Active</p>
-                <p className="text-yellow-300/80">
-                  Once you enter, you cannot leave until the hackathon ends. 
-                  Attempting to leave will result in disqualification.
-                </p>
-              </div>
+          {authError && !loading && (
+            <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <p className="text-red-400 text-sm">{authError}</p>
+              <button
+                onClick={() => router.push(`/dashboard/hackathons/${hackathonId}`)}
+                className="mt-3 text-dark-300 hover:text-white text-sm"
+              >
+                ← Back to Hackathon
+              </button>
             </div>
-          </div>
+          )}
         </div>
       </div>
     );

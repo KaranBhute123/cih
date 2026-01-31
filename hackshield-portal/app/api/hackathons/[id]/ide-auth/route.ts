@@ -1,26 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/authOptions';
 import connectDB from '@/lib/db/connect';
+import Team from '@/models/Team';
 import Hackathon from '@/lib/db/models/Hackathon';
 
-// POST - Authenticate IDE access
+// POST - Authenticate IDE access (Demo mode - no credentials needed)
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { accessId, accessPassword } = await request.json();
-
-    if (!accessId || !accessPassword) {
+    const session = await getServerSession(authOptions);
+    
+    if (!session || !session.user) {
       return NextResponse.json(
-        { error: 'Access ID and Password are required' },
-        { status: 400 }
+        { error: 'Unauthorized - Please login' },
+        { status: 401 }
       );
     }
 
     await connectDB();
 
-    const hackathon = await Hackathon.findById(params.id);
+    // For demo: Find user's team in this hackathon (no credentials needed)
+    const team = await Team.findOne({
+      hackathonId: params.id,
+      $or: [
+        { leaderId: session.user.id },
+        { 'members.userId': session.user.id }
+      ]
+    }).populate('leaderId').populate('members.userId');
 
+    if (!team) {
+      return NextResponse.json(
+        { error: 'You are not registered for this hackathon' },
+        { status: 403 }
+      );
+    }
+
+    // Get hackathon details
+    const hackathon = await Hackathon.findById(params.id);
+    
     if (!hackathon) {
       return NextResponse.json(
         { error: 'Hackathon not found' },
@@ -28,70 +48,36 @@ export async function POST(
       );
     }
 
-    // Find participant with matching credentials
-    const participant: any = hackathon.participants?.find(
-      (p: any) => 
-        p.ideAccessId === accessId && 
-        p.ideAccessPassword === accessPassword
-    );
+    // IDE available immediately after registration - no status check needed for demo
 
-    if (!participant) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
-    }
-
-    // Check if already disqualified
-    if (participant.ideDisqualified) {
-      return NextResponse.json(
-        { error: `Disqualified: ${participant.ideDisqualifiedReason}` },
-        { status: 403 }
-      );
-    }
-
-    // Check if hackathon is active
-    const now = new Date();
-    const startTime = new Date(hackathon.startDate);
-    const endTime = new Date(hackathon.endDate);
-
-    if (now < startTime) {
-      return NextResponse.json(
-        { error: 'Hackathon has not started yet' },
-        { status: 400 }
-      );
-    }
-
-    if (now > endTime) {
-      return NextResponse.json(
-        { error: 'Hackathon has ended' },
-        { status: 400 }
-      );
-    }
-
-    // Activate session
-    participant.ideSessionActive = true;
-    participant.ideSessionStarted = participant.ideSessionStarted || now;
-    participant.ideLastActivity = now;
-    await hackathon.save();
+    // Default security settings for IDE
+    const defaultSecuritySettings = {
+      enableLockdownMode: hackathon.enableScreenshotDetection || false,
+      tabSwitchLimit: 5,
+      screenshotInterval: 300000,
+      enableCodeExecution: true
+    };
 
     return NextResponse.json({
       success: true,
-      message: 'Authentication successful',
+      teamId: team._id,
+      teamName: team.name,
+      isLeader: team.leaderId._id.toString() === session.user.id,
       participant: {
-        name: participant.teamLeaderName,
-        teamName: participant.teamName,
-        email: participant.teamLeaderEmail,
+        name: session.user.name,
+        teamName: team.name,
+        email: session.user.email,
       },
       hackathon: {
         title: hackathon.title,
-        endTime: endTime.toISOString(),
+        endTime: hackathon.endDate,
       },
-      endTime: endTime.toISOString(),
+      endTime: hackathon.endDate,
+      securitySettings: defaultSecuritySettings
     });
 
   } catch (error) {
-    console.error('IDE auth error:', error);
+    console.error('IDE authentication error:', error);
     return NextResponse.json(
       { error: 'Authentication failed' },
       { status: 500 }

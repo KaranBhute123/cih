@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/authOptions';
 import connectDB from '@/lib/db/connect';
 import Hackathon from '@/lib/db/models/Hackathon';
+import Team from '@/models/Team';
+import User from '@/lib/db/models/User';
 
 export async function POST(
   request: NextRequest,
@@ -128,6 +130,22 @@ export async function POST(
       projectIdea: registrationData.projectIdea,
       previousHackathonExperience: registrationData.previousHackathonExperience,
       specialRequirements: registrationData.specialRequirements,
+      
+      // IDE Access Scheduling
+      ideSchedule: {
+        enabled: registrationData.ideSchedule?.enabled || false,
+        startTime: registrationData.ideSchedule?.startTime || '09:00',
+        endTime: registrationData.ideSchedule?.endTime || '17:00',
+        allowedDays: registrationData.ideSchedule?.allowedDays || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+        lockdownMode: registrationData.ideSchedule?.lockdownMode || true,
+        organizationApproved: false, // Always false initially, requires admin approval
+        accessWindows: registrationData.ideSchedule?.accessWindows || [],
+        requestedAt: new Date(),
+        approvedAt: null,
+        approvedBy: null
+      },
+      ideAccessRequirements: registrationData.ideAccessRequirements || '',
+      ideAccessStatus: 'pending_approval' as const,
       
       // PPT Upload for Selection Round
       pptUrl: registrationData.pptUrl,

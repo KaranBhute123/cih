@@ -92,6 +92,18 @@ interface Team {
     user: string;
     role: string;
   }[];
+  ideCredentials?: {
+    username: string;
+    passkey: string;
+    mainBranch: string;
+    branches: Array<{
+      name: string;
+      createdBy: string;
+      createdAt: Date;
+    }>;
+    credentialsSentAt?: Date;
+    leaderActivated: boolean;
+  };
 }
 
 export default function HackathonDetailPage() {
@@ -108,13 +120,33 @@ export default function HackathonDetailPage() {
   const [myTeams, setMyTeams] = useState<Team[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>('new');
   const [isLiked, setIsLiked] = useState(false);
+  const [userTeam, setUserTeam] = useState<Team | null>(null);
 
   useEffect(() => {
     fetchHackathon();
     if (session) {
       fetchMyTeams();
+      checkUserRegistration();
     }
   }, [hackathonId, session]);
+
+  const checkUserRegistration = async () => {
+    try {
+      const res = await fetch(`/api/hackathons/${hackathonId}/team`);
+      const data = await res.json();
+      console.log('✅ Team check response:', data);
+      if (res.ok && data.team) {
+        setUserTeam(data.team);
+        console.log('✅ User team FOUND:', data.team.name);
+      } else {
+        console.log('❌ No team found for user');
+        setUserTeam(null);
+      }
+    } catch (error) {
+      console.error('❌ Error checking registration:', error);
+      setUserTeam(null);
+    }
+  };
 
   const fetchHackathon = async () => {
     try {
@@ -502,33 +534,69 @@ export default function HackathonDetailPage() {
             <div className="space-y-3 mb-6">
               <div className="flex items-center justify-between py-2 border-b border-dark-700">
                 <span className="text-dark-400">Registration Deadline</span>
-                <span className="font-medium">{formatDate(hackathon.registrationDeadline)}</span>
+                <span className="font-medium text-sm">{formatDate(hackathon.registrationDeadline)}</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-dark-700">
                 <span className="text-dark-400">Start Date</span>
-                <span className="font-medium">{formatDate(hackathon.startDate)}</span>
+                <span className="font-medium text-sm">{formatDate(hackathon.startDate)}</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-dark-700">
                 <span className="text-dark-400">End Date</span>
-                <span className="font-medium">{formatDate(hackathon.endDate)}</span>
+                <span className="font-medium text-sm">{formatDate(hackathon.endDate)}</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-dark-700">
                 <span className="text-dark-400">Team Size</span>
                 <span className="font-medium">{hackathon.minTeamSize}-{hackathon.maxTeamSize} members</span>
               </div>
-              <div className="flex items-center justify-between py-2">
+              <div className="flex items-center justify-between py-2 border-b border-dark-700">
                 <span className="text-dark-400">Theme</span>
                 <span className="badge-primary">{hackathon.theme}</span>
               </div>
             </div>
 
-            {session?.user?.role === 'participant' && hackathon.status === 'upcoming' && (
-              <button
-                onClick={() => setShowJoinModal(true)}
-                className="btn-primary w-full text-lg py-3"
-              >
-                Register Now
-              </button>
+            {/* DEBUG INFO - Remove after testing */}
+            {session?.user?.role === 'participant' && (
+              <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded text-xs">
+                <div>Session Role: {session?.user?.role}</div>
+                <div>User Team: {userTeam ? userTeam.name : 'NULL'}</div>
+                <div>Team ID: {userTeam?._id || 'NULL'}</div>
+              </div>
+            )}
+
+            {/* Participant View - Team Registered - IDE Available Immediately */}
+            {session?.user?.role === 'participant' && userTeam && (
+              <div className="space-y-3">
+                <Link 
+                  href={`/dashboard/hackathons/${hackathonId}/ide`}
+                  className="btn-primary w-full text-lg py-3 text-center flex items-center justify-center gap-2"
+                >
+                  <Code className="w-5 h-5" />
+                  Enter IDE
+                </Link>
+                <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-center">
+                  <CheckCircle className="w-6 h-6 text-green-400 mx-auto mb-2" />
+                  <p className="text-green-400 text-xs font-medium">Team: {userTeam.name}</p>
+                  <p className="text-dark-400 text-xs mt-1">IDE Ready - Demo Mode</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Participant View - No Team Created Yet */}
+            {session?.user?.role === 'participant' && !userTeam && (
+              <div className="space-y-3">
+                <div className="p-4 bg-dark-700 border border-dark-600 rounded-lg text-center">
+                  <Users className="w-6 h-6 text-dark-400 mx-auto mb-2" />
+                  <p className="text-dark-300 text-sm">No team found</p>
+                  <p className="text-dark-400 text-xs mt-2">Create a team in "My Teams" section first</p>
+                </div>
+                <Link 
+                  href="/dashboard/teams"
+                  className="btn-secondary w-full text-center flex items-center justify-center gap-2"
+                >
+                  <Users className="w-4 h-4" />
+                  Go to My Teams
+                </Link>
+              </div>
             )}
             
             {session?.user?.role === 'organization' && (

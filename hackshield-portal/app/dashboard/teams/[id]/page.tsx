@@ -317,8 +317,8 @@ export default function TeamDetailPage() {
               <div className="text-sm text-dark-400">Score</div>
             </div>
             <div className="card p-4 text-center">
-              <Shield className={`w-6 h-6 mx-auto mb-2 ${team.securityViolations.length > 0 ? 'text-red-400' : 'text-green-400'}`} />
-              <div className="text-2xl font-bold">{team.securityViolations.length}</div>
+              <Shield className={`w-6 h-6 mx-auto mb-2 ${team.securityViolations?.length > 0 ? 'text-red-400' : 'text-green-400'}`} />
+              <div className="text-2xl font-bold">{team.securityViolations?.length || 0}</div>
               <div className="text-sm text-dark-400">Violations</div>
             </div>
           </div>
@@ -462,7 +462,7 @@ export default function TeamDetailPage() {
           </div>
 
           {/* Security Violations */}
-          {team.securityViolations.length > 0 && (
+          {team.securityViolations && team.securityViolations.length > 0 && (
             <div className="card p-6 border border-red-500/30">
               <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-red-400">
                 <Shield className="w-5 h-5" />

@@ -70,7 +70,8 @@ export async function PUT(
     }
 
     // Check if user is the organization owner
-    if (hackathon.organization.toString() !== session.user.id) {
+    const ownerId = hackathon.organization || (hackathon as any).createdBy;
+    if (ownerId && ownerId.toString() !== session.user.id) {
       return NextResponse.json(
         { error: 'You are not authorized to update this hackathon' },
         { status: 403 }
@@ -128,7 +129,8 @@ export async function DELETE(
     }
 
     // Check if user is the organization owner
-    if (hackathon.organization.toString() !== session.user.id) {
+    const ownerId = hackathon.organization || (hackathon as any).createdBy;
+    if (ownerId && ownerId.toString() !== session.user.id) {
       return NextResponse.json(
         { error: 'You are not authorized to delete this hackathon' },
         { status: 403 }
